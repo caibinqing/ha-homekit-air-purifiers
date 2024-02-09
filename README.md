@@ -2,4 +2,4 @@
 
 Override the core integration, adding type_air_purifier.
 
-HA version: 2024.1.0
+HA version: 2024.2.0
