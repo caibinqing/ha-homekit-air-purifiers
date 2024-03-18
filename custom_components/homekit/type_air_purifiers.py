@@ -4,6 +4,7 @@ from typing import Any
 
 from pyhap.characteristic import Characteristic
 from pyhap.const import CATEGORY_AIR_PURIFIER
+from pyhap.util import callback as pyhap_callback
 
 from homeassistant.components.fan import (
     ATTR_OSCILLATING,
@@ -303,7 +304,9 @@ class AirPurifier(HomeAccessory):
 
         serv_air_purifier.setter_callback = self._set_chars
 
-    async def run(self) -> None:
+    @pyhap_callback  # type: ignore[misc]
+    @callback
+    def run(self) -> None:
         """Handle accessory driver started event.
 
         Run inside the Home Assistant event loop.
@@ -353,7 +356,7 @@ class AirPurifier(HomeAccessory):
                 )
             )
 
-        await super().run()
+        super().run()
 
     @callback
     def _async_update_current_temperature_event(
