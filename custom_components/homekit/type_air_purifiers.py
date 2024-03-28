@@ -1,4 +1,5 @@
 """Class to hold all air purifier accessories."""
+
 import logging
 from typing import Any
 
@@ -360,7 +361,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_temperature_event(
-        self, event: EventType[EventStateChangedData]
+            self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_temperature(event.data.get("new_state"))
@@ -395,7 +396,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_humidity_event(
-        self, event: EventType[EventStateChangedData]
+            self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_humidity(event.data.get("new_state"))
@@ -430,7 +431,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_pm25_event(
-        self, event: EventType[EventStateChangedData]
+            self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_pm25(event.data.get("new_state"))
@@ -469,7 +470,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_pm10_event(
-        self, event: EventType[EventStateChangedData]
+            self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_pm10(event.data.get("new_state"))
@@ -526,14 +527,14 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_lock_physical_controls_switch_event(
-        self, event: EventType[EventStateChangedData]
+            self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_lock_physical_controls_switch(event.data.get("new_state"))
 
     @callback
     def _async_update_lock_physical_controls_switch(
-        self, new_state: State | None
+            self, new_state: State | None
     ) -> None:
         """Handle linked lock physical controls switch state change to update HomeKit value."""
         if new_state is None:
@@ -592,8 +593,8 @@ class AirPurifier(HomeAccessory):
             self.set_lock_physical_controls(char_values[CHAR_LOCK_PHYSICAL_CONTROLS])
 
         if (
-            CHAR_TARGET_AIR_PURIFIER_STATE in char_values
-            and self.preset_auto is not None
+                CHAR_TARGET_AIR_PURIFIER_STATE in char_values
+                and self.preset_auto is not None
         ):
             self.set_single_preset_mode(char_values[CHAR_TARGET_AIR_PURIFIER_STATE])
 
