@@ -13,7 +13,7 @@ from homeassistant.components.fan import (
     ATTR_PERCENTAGE_STEP,
     ATTR_PRESET_MODE,
     ATTR_PRESET_MODES,
-    DOMAIN,
+    DOMAIN as FAN_DOMAIN,
     SERVICE_OSCILLATE,
     SERVICE_SET_PERCENTAGE,
     SERVICE_SET_PRESET_MODE,
@@ -28,11 +28,9 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import State, callback
-from homeassistant.helpers.event import (
-    EventStateChangedData,
-    async_track_state_change_event,
-)
+from homeassistant.core import HassJobType, EventStateChangedData, State, callback
+from homeassistant.helpers.event import async_track_state_change_event
+
 from homeassistant.helpers.typing import EventType
 
 from .accessories import TYPES, HomeAccessory
@@ -79,10 +77,10 @@ TARGET_STATE_AUTOMATIC = 1
 
 @TYPES.register("AirPurifier")
 class AirPurifier(HomeAccessory):
-    """Generate an AirPurifier accessory for an air purifier entity.
+    """Generate an AirPurifier accessory for a fan entity.
 
     Currently supports, in addition to Fan properties:
-    temperature; humidity; PM2.5; auto mode.
+    temperature, humidity, PM2.5, auto mode.
     """
 
     def __init__(self, *args: Any) -> None:
@@ -125,7 +123,6 @@ class AirPurifier(HomeAccessory):
 
         serv_air_purifier = self.add_preload_service(SERV_AIR_PURIFIER, self.chars)
         self.set_primary_service(serv_air_purifier)
-
         self.char_active = serv_air_purifier.configure_char(CHAR_ACTIVE, value=0)
 
         self.char_current_air_purifier_state: Characteristic = (
@@ -157,18 +154,17 @@ class AirPurifier(HomeAccessory):
                     ),
                 )
 
+                def setter_callback(value: int, preset_mode: str = preset_mode) -> None:
+                    return self.set_preset_mode(value, preset_mode)
+
                 self.preset_mode_chars[preset_mode] = preset_serv.configure_char(
                     CHAR_ON,
                     value=False,
-                    setter_callback=lambda value, pm=preset_mode: self.set_preset_mode(
-                        value, pm
-                    ),
+                    setter_callback=setter_callback,
                 )
 
         self.char_current_temperature: Characteristic | None = None
         self.char_current_humidity: Characteristic | None = None
-        self.char_pm25_density: Characteristic | None = None
-        self.char_pm10_density: Characteristic | None = None
 
         self.linked_temperature_sensor = self.config.get(CONF_LINKED_TEMPERATURE_SENSOR)
         if self.linked_temperature_sensor:
@@ -204,9 +200,11 @@ class AirPurifier(HomeAccessory):
             if humidity_state:
                 self._async_update_current_humidity(humidity_state)
 
+        self.char_pm25_density: Characteristic | None = None
+        self.char_pm10_density: Characteristic | None = None
+
         self.linked_pm25_sensor = self.config.get(CONF_LINKED_PM25_SENSOR)
         self.linked_pm10_sensor = self.config.get(CONF_LINKED_PM10_SENSOR)
-
         if self.linked_pm25_sensor or self.linked_pm10_sensor:
             chars = [CHAR_AIR_QUALITY, CHAR_NAME]
             if self.linked_pm25_sensor:
@@ -318,6 +316,7 @@ class AirPurifier(HomeAccessory):
                     self.hass,
                     [self.linked_temperature_sensor],
                     self._async_update_current_temperature_event,
+                    job_type=HassJobType.Callback,
                 )
             )
 
@@ -327,6 +326,7 @@ class AirPurifier(HomeAccessory):
                     self.hass,
                     [self.linked_humidity_sensor],
                     self._async_update_current_humidity_event,
+                    job_type=HassJobType.Callback,
                 )
             )
 
@@ -336,6 +336,7 @@ class AirPurifier(HomeAccessory):
                     self.hass,
                     [self.linked_pm25_sensor],
                     self._async_update_current_pm25_event,
+                    job_type=HassJobType.Callback,
                 )
             )
 
@@ -345,6 +346,7 @@ class AirPurifier(HomeAccessory):
                     self.hass,
                     [self.linked_pm10_sensor],
                     self._async_update_current_pm10_event,
+                    job_type=HassJobType.Callback,
                 )
             )
 
@@ -354,6 +356,7 @@ class AirPurifier(HomeAccessory):
                     self.hass,
                     [self.linked_lock_physical_controls_switch],
                     self._async_update_lock_physical_controls_switch_event,
+                    job_type=HassJobType.Callback,
                 )
             )
 
@@ -361,7 +364,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_temperature_event(
-            self, event: EventType[EventStateChangedData]
+        self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_temperature(event.data.get("new_state"))
@@ -396,7 +399,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_humidity_event(
-            self, event: EventType[EventStateChangedData]
+        self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_humidity(event.data.get("new_state"))
@@ -431,7 +434,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_pm25_event(
-            self, event: EventType[EventStateChangedData]
+        self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_pm25(event.data.get("new_state"))
@@ -470,7 +473,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_pm10_event(
-            self, event: EventType[EventStateChangedData]
+        self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_pm10(event.data.get("new_state"))
@@ -527,14 +530,14 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_lock_physical_controls_switch_event(
-            self, event: EventType[EventStateChangedData]
+        self, event: EventType[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_lock_physical_controls_switch(event.data.get("new_state"))
 
     @callback
     def _async_update_lock_physical_controls_switch(
-            self, new_state: State | None
+        self, new_state: State | None
     ) -> None:
         """Handle linked lock physical controls switch state change to update HomeKit value."""
         if new_state is None:
@@ -593,8 +596,8 @@ class AirPurifier(HomeAccessory):
             self.set_lock_physical_controls(char_values[CHAR_LOCK_PHYSICAL_CONTROLS])
 
         if (
-                CHAR_TARGET_AIR_PURIFIER_STATE in char_values
-                and self.preset_auto is not None
+            CHAR_TARGET_AIR_PURIFIER_STATE in char_values
+            and self.preset_auto is not None
         ):
             self.set_single_preset_mode(char_values[CHAR_TARGET_AIR_PURIFIER_STATE])
 
@@ -605,12 +608,12 @@ class AirPurifier(HomeAccessory):
             assert self.preset_auto
             _LOGGER.debug("%s: Set auto to 1 (%s)", self.entity_id, self.preset_auto)
             params[ATTR_PRESET_MODE] = self.preset_auto
-            self.async_call_service(DOMAIN, SERVICE_SET_PRESET_MODE, params)
+            self.async_call_service(FAN_DOMAIN, SERVICE_SET_PRESET_MODE, params)
         elif current_state := self.hass.states.get(self.entity_id):
             percentage: float = current_state.attributes.get(ATTR_PERCENTAGE) or 50.0
             params[ATTR_PERCENTAGE] = percentage
             _LOGGER.debug("%s: Set auto to 0", self.entity_id)
-            self.async_call_service(DOMAIN, SERVICE_TURN_ON, params)
+            self.async_call_service(FAN_DOMAIN, SERVICE_TURN_ON, params)
 
     def set_preset_mode(self, value: int, preset_mode: str) -> None:
         """Set preset_mode if call came from HomeKit."""
@@ -620,29 +623,29 @@ class AirPurifier(HomeAccessory):
         params = {ATTR_ENTITY_ID: self.entity_id}
         if value:
             params[ATTR_PRESET_MODE] = preset_mode
-            self.async_call_service(DOMAIN, SERVICE_SET_PRESET_MODE, params)
+            self.async_call_service(FAN_DOMAIN, SERVICE_SET_PRESET_MODE, params)
         else:
-            self.async_call_service(DOMAIN, SERVICE_TURN_ON, params)
+            self.async_call_service(FAN_DOMAIN, SERVICE_TURN_ON, params)
 
     def set_state(self, value: int) -> None:
         """Set state if call came from HomeKit."""
         _LOGGER.debug("%s: Set state to %d", self.entity_id, value)
         service = SERVICE_TURN_ON if value == 1 else SERVICE_TURN_OFF
         params = {ATTR_ENTITY_ID: self.entity_id}
-        self.async_call_service(DOMAIN, service, params)
+        self.async_call_service(FAN_DOMAIN, service, params)
 
     def set_oscillating(self, value: int) -> None:
         """Set state if call came from HomeKit."""
         _LOGGER.debug("%s: Set oscillating to %d", self.entity_id, value)
         oscillating = value == 1
         params = {ATTR_ENTITY_ID: self.entity_id, ATTR_OSCILLATING: oscillating}
-        self.async_call_service(DOMAIN, SERVICE_OSCILLATE, params, oscillating)
+        self.async_call_service(FAN_DOMAIN, SERVICE_OSCILLATE, params, oscillating)
 
     def set_percentage(self, value: float) -> None:
         """Set state if call came from HomeKit."""
         _LOGGER.debug("%s: Set speed to %d", self.entity_id, value)
         params = {ATTR_ENTITY_ID: self.entity_id, ATTR_PERCENTAGE: value}
-        self.async_call_service(DOMAIN, SERVICE_SET_PERCENTAGE, params, value)
+        self.async_call_service(FAN_DOMAIN, SERVICE_SET_PERCENTAGE, params, value)
 
     def set_lock_physical_controls(self, value: int) -> None:
         """Set state if call came from HomeKit."""
