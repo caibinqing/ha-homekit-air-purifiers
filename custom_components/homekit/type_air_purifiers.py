@@ -28,10 +28,14 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-from homeassistant.core import HassJobType, EventStateChangedData, State, callback
+from homeassistant.core import (
+    Event,
+    HassJobType,
+    EventStateChangedData,
+    State,
+    callback,
+)
 from homeassistant.helpers.event import async_track_state_change_event
-
-from homeassistant.helpers.typing import EventType
 
 from .accessories import TYPES, HomeAccessory
 from .const import (
@@ -373,7 +377,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_current_temperature_event(
-        self, event: EventType[EventStateChangedData]
+        self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_temperature(event.data.get("new_state"))
@@ -390,14 +394,6 @@ class AirPurifier(HomeAccessory):
             return
         try:
             current_temperature = float(new_state.state)
-            if self.char_current_temperature.value != current_temperature:
-                _LOGGER.debug(
-                    "%s: Linked temperature sensor %s changed to %d",
-                    self.entity_id,
-                    self.linked_temperature_sensor,
-                    current_temperature,
-                )
-                self.char_current_temperature.set_value(current_temperature)
         except ValueError as ex:
             _LOGGER.debug(
                 "%s: Unable to update from linked temperature sensor %s: %s",
@@ -405,10 +401,19 @@ class AirPurifier(HomeAccessory):
                 self.linked_temperature_sensor,
                 ex,
             )
+            return
+        if self.char_current_temperature.value != current_temperature:
+            _LOGGER.debug(
+                "%s: Linked temperature sensor %s changed to %d",
+                self.entity_id,
+                self.linked_temperature_sensor,
+                current_temperature,
+            )
+            self.char_current_temperature.set_value(current_temperature)
 
     @callback
     def _async_update_current_humidity_event(
-        self, event: EventType[EventStateChangedData]
+        self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_humidity(event.data.get("new_state"))
@@ -425,14 +430,6 @@ class AirPurifier(HomeAccessory):
             return
         try:
             current_humidity = float(new_state.state)
-            if self.char_current_humidity.value != current_humidity:
-                _LOGGER.debug(
-                    "%s: Linked humidity sensor %s changed to %d",
-                    self.entity_id,
-                    self.linked_humidity_sensor,
-                    current_humidity,
-                )
-                self.char_current_humidity.set_value(current_humidity)
         except ValueError as ex:
             _LOGGER.debug(
                 "%s: Unable to update from linked humidity sensor %s: %s",
@@ -440,10 +437,19 @@ class AirPurifier(HomeAccessory):
                 self.linked_humidity_sensor,
                 ex,
             )
+            return
+        if self.char_current_humidity.value != current_humidity:
+            _LOGGER.debug(
+                "%s: Linked humidity sensor %s changed to %d",
+                self.entity_id,
+                self.linked_humidity_sensor,
+                current_humidity,
+            )
+            self.char_current_humidity.set_value(current_humidity)
 
     @callback
     def _async_update_current_pm25_event(
-        self, event: EventType[EventStateChangedData]
+        self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_pm25(event.data.get("new_state"))
@@ -460,18 +466,6 @@ class AirPurifier(HomeAccessory):
             return
         try:
             current_pm25 = float(new_state.state)
-            if self.char_pm25_density.value != current_pm25:
-                _LOGGER.debug(
-                    "%s: Linked pm25 sensor %s changed to %d",
-                    self.entity_id,
-                    self.linked_pm25_sensor,
-                    current_pm25,
-                )
-                self.char_pm25_density.set_value(current_pm25)
-                self._update_air_quality()
-                # air_quality = density_to_air_quality(current_pm25)
-                # self.char_pm25_air_quality.set_value(air_quality)
-                # _LOGGER.debug("%s: Set air_quality to %d", self.entity_id, air_quality)
         except ValueError as ex:
             _LOGGER.debug(
                 "%s: Unable to update from linked pm25 sensor %s: %s",
@@ -479,10 +473,23 @@ class AirPurifier(HomeAccessory):
                 self.linked_pm25_sensor,
                 ex,
             )
+            return
+        if self.char_pm25_density.value != current_pm25:
+            _LOGGER.debug(
+                "%s: Linked pm25 sensor %s changed to %d",
+                self.entity_id,
+                self.linked_pm25_sensor,
+                current_pm25,
+            )
+            self.char_pm25_density.set_value(current_pm25)
+            self._update_air_quality()
+            # air_quality = density_to_air_quality(current_pm25)
+            # self.char_pm25_air_quality.set_value(air_quality)
+            # _LOGGER.debug("%s: Set air_quality to %d", self.entity_id, air_quality)
 
     @callback
     def _async_update_current_pm10_event(
-        self, event: EventType[EventStateChangedData]
+        self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_current_pm10(event.data.get("new_state"))
@@ -499,18 +506,6 @@ class AirPurifier(HomeAccessory):
             return
         try:
             current_pm10 = float(new_state.state)
-            if self.char_pm10_density.value != current_pm10:
-                _LOGGER.debug(
-                    "%s: Linked pm10 sensor %s changed to %d",
-                    self.entity_id,
-                    self.linked_pm10_sensor,
-                    current_pm10,
-                )
-                self.char_pm10_density.set_value(current_pm10)
-                self._update_air_quality()
-                # air_quality = density_to_air_quality_pm10(current_pm10)
-                # self.char_pm10_air_quality.set_value(air_quality)
-                # _LOGGER.debug("%s: Set air_quality to %d", self.entity_id, air_quality)
         except ValueError as ex:
             _LOGGER.debug(
                 "%s: Unable to update from linked pm10 sensor %s: %s",
@@ -518,8 +513,21 @@ class AirPurifier(HomeAccessory):
                 self.linked_pm10_sensor,
                 ex,
             )
+            return
+        if self.char_pm10_density.value != current_pm10:
+            _LOGGER.debug(
+                "%s: Linked pm10 sensor %s changed to %d",
+                self.entity_id,
+                self.linked_pm10_sensor,
+                current_pm10,
+            )
+            self.char_pm10_density.set_value(current_pm10)
+            self._update_air_quality()
+            # air_quality = density_to_air_quality_pm10(current_pm10)
+            # self.char_pm10_air_quality.set_value(air_quality)
+            # _LOGGER.debug("%s: Set air_quality to %d", self.entity_id, air_quality)
 
-    def _update_air_quality(self):
+    def _update_air_quality(self) -> None:
         if self.char_pm25_density:
             current_pm25 = self.char_pm25_density.value
             air_quality_pm25 = density_to_air_quality(current_pm25)
@@ -539,7 +547,7 @@ class AirPurifier(HomeAccessory):
 
     @callback
     def _async_update_lock_physical_controls_switch_event(
-        self, event: EventType[EventStateChangedData]
+        self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle state change event listener callback."""
         self._async_update_lock_physical_controls_switch(event.data.get("new_state"))
@@ -556,23 +564,15 @@ class AirPurifier(HomeAccessory):
                 self.linked_lock_physical_controls_switch,
             )
             return
-        try:
-            lock_physical_controls = new_state.state == STATE_ON
-            if self.char_lock_physical_controls.value != lock_physical_controls:
-                _LOGGER.debug(
-                    "%s: Linked lock physical controls switch %s changed to %d",
-                    self.entity_id,
-                    self.linked_lock_physical_controls_switch,
-                    lock_physical_controls,
-                )
-                self.char_lock_physical_controls.set_value(lock_physical_controls)
-        except ValueError as ex:
+        lock_physical_controls = new_state.state == STATE_ON
+        if self.char_lock_physical_controls.value != lock_physical_controls:
             _LOGGER.debug(
-                "%s: Unable to update from linked lock physical controls switch %s: %s",
+                "%s: Linked lock physical controls switch %s changed to %d",
                 self.entity_id,
                 self.linked_lock_physical_controls_switch,
-                ex,
+                lock_physical_controls,
             )
+            self.char_lock_physical_controls.set_value(lock_physical_controls)
 
     def _set_chars(self, char_values: dict[str, Any]) -> None:
         _LOGGER.debug("AirPurifier _set_chars: %s", char_values)
@@ -702,7 +702,7 @@ class AirPurifier(HomeAccessory):
         # Automatic mode is represented in HASS by a preset called Auto or auto
         self.char_target_air_purifier_state.set_value(
             TARGET_STATE_AUTOMATIC
-            if current_preset_mode and current_preset_mode.lower() == "auto"
+            if current_preset_mode and current_preset_mode == self.preset_auto
             else TARGET_STATE_MANUAL
         )
         # Handle multiple preset modes
