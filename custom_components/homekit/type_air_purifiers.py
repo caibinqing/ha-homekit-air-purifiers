@@ -53,6 +53,8 @@ from .const import (
     CONF_LINKED_PM10_SENSOR,
     CONF_LINKED_PM25_SENSOR,
     CONF_LINKED_TEMPERATURE_SENSOR,
+    CONF_PRESET_MODE_AUTO,
+    CONF_PRESET_MODE_MANUAL,
     PROP_MIN_STEP,
     SERV_AIR_PURIFIER,
     SERV_AIR_QUALITY_SENSOR,
@@ -99,16 +101,21 @@ class AirPurifier(HomeAccessory):
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         percentage_step = state.attributes.get(ATTR_PERCENTAGE_STEP, 1)
         self.preset_modes: list[str] | None = state.attributes.get(ATTR_PRESET_MODES)
+        preset_mode_manual = self.config.get(CONF_PRESET_MODE_MANUAL, "manual")
+        preset_mode_auto = self.config.get(CONF_PRESET_MODE_AUTO, "auto")
         if self.preset_modes:
             self.preset_modes = list(
-                filter(lambda x: x.lower() != "manual", self.preset_modes)
+                filter(
+                    lambda x: x.lower() not in (preset_mode_manual, preset_mode_auto),
+                    self.preset_modes,
+                )
             )
 
         self.preset_auto: str | None = next(
-            filter(lambda x: x.lower() == "auto", self.preset_modes), None
+            filter(lambda x: x.lower() == preset_mode_auto, self.preset_modes), None
         )
-        _LOGGER.debug("%s: preset_modes: %s", self.entity_id, self.preset_modes)
-        _LOGGER.debug("%s: preset_auto: %s", self.entity_id, self.preset_auto)
+        # _LOGGER.debug("%s: preset_modes: %s", self.entity_id, self.preset_modes)
+        # _LOGGER.debug("%s: preset_auto: %s", self.entity_id, self.preset_auto)
 
         if features & FanEntityFeature.OSCILLATE:
             self.chars.append(CHAR_SWING_MODE)

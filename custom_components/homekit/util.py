@@ -74,6 +74,8 @@ from .const import (
     CONF_MAX_FPS,
     CONF_MAX_HEIGHT,
     CONF_MAX_WIDTH,
+    CONF_PRESET_MODE_AUTO,
+    CONF_PRESET_MODE_MANUAL,
     CONF_STREAM_ADDRESS,
     CONF_STREAM_COUNT,
     CONF_STREAM_SOURCE,
@@ -219,6 +221,8 @@ FAN_SCHEMA = BASIC_INFO_SCHEMA.extend(
         vol.Optional(CONF_LINKED_LOCK_PHYSICAL_CONTROLS_SWITCH): cv.entity_domain(
             switch.DOMAIN
         ),
+        vol.Optional(CONF_PRESET_MODE_MANUAL): cv.string,
+        vol.Optional(CONF_PRESET_MODE_AUTO): cv.string,
     }
 )
 
