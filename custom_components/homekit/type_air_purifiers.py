@@ -100,20 +100,22 @@ class AirPurifier(HomeAccessory):
 
         features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         percentage_step = state.attributes.get(ATTR_PERCENTAGE_STEP, 1)
-        self.preset_modes: list[str] | None = state.attributes.get(ATTR_PRESET_MODES)
+        self.preset_modes: list[str] | None = state.attributes.get(
+            ATTR_PRESET_MODES, []
+        )
         preset_mode_manual = self.config.get(CONF_PRESET_MODE_MANUAL, "manual")
         preset_mode_auto = self.config.get(CONF_PRESET_MODE_AUTO, "auto")
-        if self.preset_modes:
-            self.preset_modes = list(
-                filter(
-                    lambda x: x.lower() not in (preset_mode_manual, preset_mode_auto),
-                    self.preset_modes,
-                )
-            )
-
+        self.preset_manual: str | None = next(
+            filter(lambda x: x.lower() == preset_mode_manual, self.preset_modes), None
+        )
         self.preset_auto: str | None = next(
             filter(lambda x: x.lower() == preset_mode_auto, self.preset_modes), None
         )
+        self.preset_modes = [
+            x
+            for x in self.preset_modes
+            if x not in [self.preset_manual, self.preset_auto]
+        ]
         # _LOGGER.debug("%s: preset_modes: %s", self.entity_id, self.preset_modes)
         # _LOGGER.debug("%s: preset_auto: %s", self.entity_id, self.preset_auto)
 
@@ -602,25 +604,20 @@ class AirPurifier(HomeAccessory):
         if CHAR_LOCK_PHYSICAL_CONTROLS in char_values:
             self.set_lock_physical_controls(char_values[CHAR_LOCK_PHYSICAL_CONTROLS])
 
-        if (
-            CHAR_TARGET_AIR_PURIFIER_STATE in char_values
-            and self.preset_auto is not None
-        ):
+        if CHAR_TARGET_AIR_PURIFIER_STATE in char_values:
             self.set_single_preset_mode(char_values[CHAR_TARGET_AIR_PURIFIER_STATE])
 
     def set_single_preset_mode(self, value: int) -> None:
         """Set auto call came from HomeKit."""
         params: dict[str, Any] = {ATTR_ENTITY_ID: self.entity_id}
-        if value:
-            assert self.preset_auto
+        if value and self.preset_auto:
             _LOGGER.debug("%s: Set auto to 1 (%s)", self.entity_id, self.preset_auto)
             params[ATTR_PRESET_MODE] = self.preset_auto
             self.async_call_service(FAN_DOMAIN, SERVICE_SET_PRESET_MODE, params)
-        elif current_state := self.hass.states.get(self.entity_id):
-            percentage: float = current_state.attributes.get(ATTR_PERCENTAGE) or 50.0
-            params[ATTR_PERCENTAGE] = percentage
-            _LOGGER.debug("%s: Set auto to 0", self.entity_id)
-            self.async_call_service(FAN_DOMAIN, SERVICE_TURN_ON, params)
+        elif not value and self.preset_manual:
+            _LOGGER.debug("%s: Set auto to 0 (%s)", self.entity_id, self.preset_manual)
+            params[ATTR_PRESET_MODE] = self.preset_manual
+            self.async_call_service(FAN_DOMAIN, SERVICE_SET_PRESET_MODE, params)
 
     def set_preset_mode(self, value: int, preset_mode: str) -> None:
         """Set preset_mode if call came from HomeKit."""
@@ -631,8 +628,8 @@ class AirPurifier(HomeAccessory):
         if value:
             params[ATTR_PRESET_MODE] = preset_mode
             self.async_call_service(FAN_DOMAIN, SERVICE_SET_PRESET_MODE, params)
-        else:
-            self.async_call_service(FAN_DOMAIN, SERVICE_TURN_ON, params)
+        # else:
+        #     self.async_call_service(FAN_DOMAIN, SERVICE_TURN_ON, params)
 
     def set_state(self, value: int) -> None:
         """Set state if call came from HomeKit."""
